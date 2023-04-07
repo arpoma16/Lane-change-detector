@@ -10,7 +10,7 @@ from rclpy.node import Node # Handles the creation of nodes
 from sensor_msgs.msg import Image # Image is the message type
 import cv2 # OpenCV library
 from cv_bridge import CvBridge # Package to convert between ROS and OpenCV Images
-from process_lane_line import process_image
+from .process_lane_line import process_image
  
 class ImageSubscriber(Node):
   """

@@ -15,3 +15,5 @@ sudo apt install python-cv-bridge
 sudo apt-get install ros-(ROS version name)-cv-bridge
 
 sudo apt-get install ros-(ROS version name)-vision-opencv
+
+sudo apt install libcanberra-gtk-module
