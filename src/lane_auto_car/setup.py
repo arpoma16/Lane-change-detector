@@ -22,6 +22,7 @@ setup(
         'console_scripts': [
             "ImagePublisher = lane_auto_car.camera_reader:main",
             "ImageSubscriber = lane_auto_car.lane_line_detector:main",
+            "ImagePublisherCompress = lane_auto_car.camera_reader_compress:main",
         ],
     },
 )
