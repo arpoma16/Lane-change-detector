@@ -19,7 +19,7 @@ class ImagePublisher(Node):
         
         # Create the publisher. This publisher will publish an Image
         # to the video_frames topic. The queue size is 10 messages.
-        self.publisher_ = self.create_publisher(Image, 'video_frame_compress', 10)
+        self.publisher_ = self.create_publisher(CompressedImage, 'video_frame_compress', 10)
         
         # We will publish a message every 0.1 seconds
         timer_period = 0.1  # seconds
@@ -29,7 +29,7 @@ class ImagePublisher(Node):
             
         # Create a VideoCapture object
         # The argument '0' gets the default webcam.
-        self.cap = cv2.VideoCapture('http://192.168.174.68:8080/video')
+        self.cap = cv2.VideoCapture('http://192.168.140.188:8080/video')
         # self.cap = cv2.VideoCapture(0)
             
         # Used to convert between ROS and OpenCV images
