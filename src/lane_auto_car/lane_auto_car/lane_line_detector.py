@@ -26,11 +26,7 @@ class ImageSubscriber(Node):
     # Create the subscriber. This subscriber will receive an Image
     # from the video_frames topic. The queue size is 10 messages.
     self.publisher_ = self.create_publisher(Image, 'video_lines',10)
-    self.subscription = self.create_subscription(
-      Image, 
-      'video_frames', 
-      self.listener_callback, 
-      10)
+    self.subscription = self.create_subscription(Image, 'video_frames', self.listener_callback, 10)
     self.subscription # prevent unused variable warning
       
     # Used to convert between ROS and OpenCV images

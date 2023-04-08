@@ -103,7 +103,10 @@ def draw_lines1(img, lines, color=[255, 0, 0], thickness=5):
     for line in lines:
         for x1, y1, x2, y2 in line:
             # print(line)
-            m = ((y2 - y1) / (x2 - x1))
+            if x2-x1 != 0:
+                m = ((y2 - y1) / (x2 - x1))
+            else:
+                m=((y2 - y1) / (x2 - x1 +0.001))
             b = y2 - m * x2
             long = math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
             if m >0.5:
@@ -195,10 +198,10 @@ def process_image(img):
 
     regionFindingLane = np.array([[(0, imshape[0]), (450, 330), (520, 330), (imshape[1], imshape[0])]], dtype=np.int32)
     imgInterest = region_of_interest(edges, regionFindingLane)
-    cv2.imshow("canny", imgInterest)
+    #cv2.imshow("canny", imgInterest)
 
     line_img1 = hough_lines(imgInterest,2,np.pi/180,15,30,5)
-    cv2.imshow("lineas", line_img1)
+    #cv2.imshow("lineas", line_img1)
     #imgResult =weighted_img(img,line_img)
     imgResult = img.copy()
     mask = line_img1[:,:,0] > 100
