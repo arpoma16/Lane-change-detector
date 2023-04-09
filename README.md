@@ -1,7 +1,12 @@
 # Lane-change-detector
 Deteccion de cambio de con vision artificial e implementacion en un carro a control remoto
+
 https://wilselby.com/diy-autonomous-vehicle-project/computer-vision-applications/image-segmentation/
+
+
 https://automaticaddison.com/getting-started-with-opencv-in-ros-2-foxy-fitzroy-python/
+
+https://roboticsknowledgebase.com/wiki/tools/roslibjs/
 # installation
 
 install ubuntu 20 server
