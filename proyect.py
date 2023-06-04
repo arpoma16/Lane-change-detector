@@ -3,6 +3,7 @@ import cv2
 import math
 import random
 import time
+from lines import lanelines
 
 
 histo_treshold=50
@@ -144,7 +145,7 @@ def process_image(image):
     global leftx_base, rightx_base, left_flag, right_flag, car_out
     #image = gaussian_blur(image, 5)
     imshape = image.shape
-    ksize = 3 # Choose a larger odd number to smooth gradient measurements
+    ksize = 7 # Choose a larger odd number to smooth gradient measurements
     poly_int=[(0, round(imshape[0]*0.9)),
             (round(imshape[1]*0.36), round(imshape[0]*0.5)),
             (round(imshape[1]*0.60), round(imshape[0]*0.5)),
@@ -169,9 +170,23 @@ def process_image(image):
     s_binary = hls_select(img_unwarp, thresh=(30, 255))
     color_binary = np.dstack(( np.zeros_like(gradx), gradx, s_binary)) * 255
     cv2.polylines(image, [regionFindingLane], True, (255, 255, 0), 1)
-    cv2.imshow("gradx", gradx*255)
+    
     #cv2.imshow("hls", s_binary*255)
     cv2.imshow("input video video", image)
+    mask = np.zeros((gradx.shape[0],gradx.shape[1]), np.uint8)
+    mask[(img_unwarp[:,:,2] > 1)] = 1
+    kernel = np.ones((5,5),np.uint8)
+    mask = cv2.erode(mask*255,kernel,iterations=1)
+    gradx = cv2.bitwise_and(gradx*255,mask)
+    cv2.imshow("gradx", gradx)
+    #cv2.line(mask, (10,10), (60,60), 255, 5)
+    #print(np.rint(dst_region).astype(int))
+    #cv2.fillPoly(mask, pts=[np.rint(dst_region).astype(int)], color=255)
+    #cv2.imshow("mask1",mask)
+    #cv2.imshow("mask",mask_and)
+
+    
+
     histogram = np.sum(gradx[gradx.shape[0]//2:,:], axis=0)
     # Find the peak of the left and right halves of the histogram
     # These will be the starting point for the left and right lines
@@ -179,7 +194,7 @@ def process_image(image):
     #quarter_point = np.int(midpoint//2)
     # Previously the left/right base was the max of the left/right half of the histogram
     # this changes it so that only a quarter of the histogram (directly to the left/right) is considered
-    leftx_base = np.argmax(histogram[0:midpoint])# + quarter_point
+    leftx_base = midpoint - np.argmax(np.flip(histogram[0:midpoint]))# + quarter_point
     if histogram[leftx_base] < histo_treshold:
         left_flag=False
     else:
@@ -217,7 +232,7 @@ def process_image(image):
     
     return combined
 
-video = cv2.VideoCapture(".//my_video-5.mkv")
+video = cv2.VideoCapture(".//data//my_video-5.mkv")
 while True:
     time.sleep(0.1)
     success, img = video.read()
