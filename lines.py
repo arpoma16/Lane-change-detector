@@ -12,12 +12,47 @@ class lanelines:
         self.age = 0
         self.max_age = max_age
         self.state = '0'
+        self.tracks = []
+        self.x = l1
+        self.y = l2
+        self.tracks.append([self.x,self.y])
+        self.done = False
 
         self.kfObj = KalmanFilter()
         self.predictedCoords = np.array([[l1],[l2]],dtype=np.float32)
-        self.kfObj.first_detected(l1, l2)
-        self.tracker =cv2.TrackerMIL_create()     
+        self.kfObj.first_detected(l1, l2)   
 
+    def updateCoords(self, xn=None, yn=None):
+        self.age = 0
+        if xn is None or yn is None:
+            return self.predict()
+        self.tracks.append([xn,yn])
+        self.x = xn
+        self.y = yn
+        self.predictedCoords = self.kfObj.Estimate(xn, yn)
+        if len(self.tracks) >= 2:
+            self.distl1 = self.tracks[-1][0] - self.tracks[-2][0] + self.distl1 
+            self.distl2 = - self.tracks[-1][1] + self.tracks[-2][1] + self.distl2
+            #print("id:" + str(self.i) + " disty : "+ str(self.disty))
+        return self.predictedCoords
+    
+    def prediction(self):
+        return self.predictedCoords
+
+    def predict(self):
+        self.predictedCoords = self.kfObj.predic()
+        return self.predictedCoords
+    def setDone(self):
+        self.done = True
+    def timedOut(self):
+        return self.done
+    def age_one(self):
+        self.age += 1
+        if self.age > self.max_age:
+            self.done = True
+            #print('done')
+        return True
+    
 # Instantiate OCV kalman filter
 class KalmanFilter:
     def __init__(self):
