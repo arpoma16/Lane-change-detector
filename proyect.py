@@ -14,6 +14,8 @@ rightx_base=0
 left_flag=0
 right_flag=0
 car_out=0
+anchor_Vehicle = 155#155
+laneline_obj = None
 
 def grayscale(img):
     """Applies the Grayscale transform
@@ -104,6 +106,7 @@ def unwarp(img, src, dst):
 
 
 def draw_lane(original_img, binary_img, l_fit, r_fit, Minv):
+    global car_out,left_flag, right_flag,leftpeak,rightpeak
     new_img = np.copy(original_img)
     if l_fit is None or r_fit is None:
         return original_img
@@ -127,13 +130,17 @@ def draw_lane(original_img, binary_img, l_fit, r_fit, Minv):
 
     # Draw the lane onto the warped blank image
     if car_out == 0:
-        cv2.fillPoly(color_warp, np.int_([pts]), (0,255, 0))
+        cv2.fillPoly(color_warp, np.int_([pts]), (0,255, ))
     else:
         cv2.fillPoly(color_warp, np.int_([pts]), (0,0, 255))
-    cv2.polylines(color_warp, np.int32([pts_left]), isClosed=False, color=(255,0,255), thickness=15)
-    cv2.polylines(color_warp, np.int32([pts_right]), isClosed=False, color=(0,255,255), thickness=15)
-
-
+    if left_flag :
+        cv2.polylines(color_warp, np.int32([pts_left]), isClosed=False, color=(255,0,255), thickness=15)
+    if right_flag :
+        cv2.polylines(color_warp, np.int32([pts_right]), isClosed=False, color=(0,255,255), thickness=15)
+    
+    cv2.line(color_warp, (rightpeak, 0), (rightpeak, h), (255,255,100), thickness=2)
+    cv2.line(color_warp, (leftpeak, 0), (leftpeak, h), (255,255,100), thickness=2)
+    cv2.imshow("image wrap",color_warp)
     # Warp the blank back to original image space using inverse perspective matrix (Minv)
     newwarp = cv2.warpPerspective(color_warp, Minv, (w, h)) 
     # Combine the result with the original image
@@ -142,22 +149,32 @@ def draw_lane(original_img, binary_img, l_fit, r_fit, Minv):
 
 
 def process_image(image):
-    global leftx_base, rightx_base, left_flag, right_flag, car_out
+    global leftx_base, rightx_base, left_flag, right_flag, car_out,leftpeak,rightpeak,anchor_Vehicle,laneline_obj
     #image = gaussian_blur(image, 5)
     imshape = image.shape
     ksize = 7 # Choose a larger odd number to smooth gradient measurements
+    #poly_int=[(0, round(imshape[0]*0.80)),
+    #        (round(imshape[1]*0.32), round(imshape[0]*0.5)),
+    #        (round(imshape[1]*0.64), round(imshape[0]*0.5)),
+    #        (imshape[1], round(imshape[0]*0.80))]
     poly_int=[(0, round(imshape[0]*0.9)),
             (round(imshape[1]*0.36), round(imshape[0]*0.5)),
-            (round(imshape[1]*0.60), round(imshape[0]*0.5)),
+            (round(imshape[1]*0.62), round(imshape[0]*0.5)),
             (imshape[1], round(imshape[0]*0.9))]
-    poly_out=[(0+100,imshape[0]),
-              (0+100, 0),
-              (imshape[1]-100, 0),
-              (imshape[1]-100, imshape[0])]
+    poly_out=[(0+200,imshape[0]),
+              (0+200, 0),
+              (imshape[1]-200, 0),
+              (imshape[1]-200, imshape[0])]
     regionFindingLane = np.array(poly_int, dtype=np.int32)
     src_region = np.array(poly_int, dtype=np.float32)
     dst_region =  np.array(poly_out, dtype=np.float32)
     #imgInterest = region_of_interest(edges, regionFindingLane)
+    roi_img = np.copy(image)
+    roi_mask = np.zeros((imshape[0],imshape[1]),np.uint8)
+    cv2.fillPoly(roi_mask, pts=[np.rint(poly_int).astype(int)], color=255)
+    roi_img = cv2.bitwise_and(roi_img,roi_img,mask=roi_mask)
+    cv2.imshow("roi",roi_img)
+
 
     img_unwarp, M, Minv = unwarp(image, src_region, dst_region)
     cv2.imshow("unwrap", img_unwarp)
@@ -176,9 +193,9 @@ def process_image(image):
     mask = np.zeros((gradx.shape[0],gradx.shape[1]), np.uint8)
     mask[(img_unwarp[:,:,2] > 1)] = 1
     kernel = np.ones((5,5),np.uint8)
-    mask = cv2.erode(mask*255,kernel,iterations=1)
-    gradx = cv2.bitwise_and(gradx*255,mask)
-    cv2.imshow("gradx", gradx)
+    mask = cv2.erode(mask,kernel,iterations=1)
+    gradx = cv2.bitwise_and(gradx,mask)
+    cv2.imshow("gradx", gradx*255)
     #cv2.line(mask, (10,10), (60,60), 255, 5)
     #print(np.rint(dst_region).astype(int))
     #cv2.fillPoly(mask, pts=[np.rint(dst_region).astype(int)], color=255)
@@ -205,20 +222,43 @@ def process_image(image):
         right_flag=False
     else:
         right_flag=True
-    #print("leftpeak")
-    #print(leftx_base)
-    #print("rightpeak")
-    #print(rightx_base)
+    
+    leftpeak = midpoint - anchor_Vehicle
+    rightpeak = midpoint + anchor_Vehicle
+    #if leftx_base > leftpeak or rightx_base < rightpeak:
+    if leftx_base > leftpeak or rightx_base < rightpeak:
+        car_out=1
+    else:
+        car_out=0   
+
+    if left_flag and right_flag and laneline_obj is None:# Crear filtro de kalman
+        laneline_obj = lanelines(leftx_base,rightx_base,5)
+    
+    if not(laneline_obj is None):
+        laneline_obj.age_one()
+        auxValue = laneline_obj.prediction()
+        if right_flag and left_flag:#(leftx_base-auxValue[0]<10) and (rightx_base-auxValue[1]<10) :# distancia entre puntos es peque;o
+            laneline_obj.updateCoords(leftx_base,rightx_base)
+        else:# se pierde la distancia entre puntos 
+            laneline_obj.predict()
+        if laneline_obj.timedOut():
+            laneline_obj = None
+
+        print(auxValue)
+        
+
+        
+    #print("base"+str(histo_treshold)+" medido - rig:" + str(histogram[rightx_base]) +" medido - left:" + str(histogram[leftx_base]))
+    #print("left"+str(leftx_base)+" >" + str(leftpeak) +" right" + str(rightx_base)+" <" + str(rightpeak))
+
     l_fit = [leftx_base,leftx_base,leftx_base]
     r_fit = [rightx_base,rightx_base,rightx_base]
 
     exampleImg_out1 = draw_lane(image, gradx, l_fit, r_fit, Minv)
+    
     cv2.imshow("input video22", exampleImg_out1)
 
-    if leftx_base > leftpeak or rightx_base < rightpeak:
-        car_out=1
-    else:
-        car_out=0
+
 
 
 
@@ -228,11 +268,10 @@ def process_image(image):
     #combined[((gradx == 1)) | ((mag_binary == 1) & (dir_binary == 1))] = 255
     combined=gradx
 
-
-    
     return combined
 
-video = cv2.VideoCapture(".//data//my_video-5.mkv")
+#video = cv2.VideoCapture(".//data//my_video-5.mkv")
+video = cv2.VideoCapture(".//data//my_video-8.mp4")
 while True:
     time.sleep(0.1)
     success, img = video.read()
