@@ -42,6 +42,8 @@ class lanelines:
     def predict(self):
         self.predictedCoords = self.kfObj.predic()
         return self.predictedCoords
+    def correct(self,x,y):
+        return self.kfObj.correct(x,y)
     def setDone(self):
         self.done = True
     def timedOut(self):
@@ -68,8 +70,9 @@ class KalmanFilter:
         #self.kf.processNoiseCov = np.array([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]],np.float32) * 0.03
     def Estimate(self, coordX, coordY):
         ''' This function estimates the position of the object'''
+        val = self.kf.predict()
         self.kf.correct(np.array([[coordX],[coordY]],dtype=np.float32))
-        return self.kf.predict()
+        return val
 
     def correct(self, coordX, coordY):
         self.kf.correct(np.array([[coordX],[coordY]],dtype=np.float32))

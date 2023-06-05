@@ -6,7 +6,7 @@ import time
 from lines import lanelines
 
 
-histo_treshold=50
+histo_treshold=40
 leftpeak=129
 rightpeak=440
 leftx_base=0
@@ -204,7 +204,7 @@ def process_image(image):
 
     
 
-    histogram = np.sum(gradx[gradx.shape[0]//2:,:], axis=0)
+    histogram = np.sum(gradx[gradx.shape[0]//2:(5*gradx.shape[0]//6),:], axis=0)
     # Find the peak of the left and right halves of the histogram
     # These will be the starting point for the left and right lines
     midpoint = int(histogram.shape[0]//2)
@@ -223,6 +223,8 @@ def process_image(image):
     else:
         right_flag=True
     
+    print("leftx_base"+str(leftx_base)+"-"+str(histogram[leftx_base])+"-"+"rightx_base"+str(leftx_base)+"-"+str(histogram[rightx_base]))
+    
     leftpeak = midpoint - anchor_Vehicle
     rightpeak = midpoint + anchor_Vehicle
     #if leftx_base > leftpeak or rightx_base < rightpeak:
@@ -233,17 +235,21 @@ def process_image(image):
 
     if left_flag and right_flag and laneline_obj is None:# Crear filtro de kalman
         laneline_obj = lanelines(leftx_base,rightx_base,5)
-    
+        print("Create kalman")
+
     if not(laneline_obj is None):
+        print("realiza kalman")
         laneline_obj.age_one()
         auxValue = laneline_obj.prediction()
         if right_flag and left_flag:#(leftx_base-auxValue[0]<10) and (rightx_base-auxValue[1]<10) :# distancia entre puntos es peque;o
-            laneline_obj.updateCoords(leftx_base,rightx_base)
+            print("update - kalman")
+            auxValue = laneline_obj.updateCoords(leftx_base,rightx_base)
         else:# se pierde la distancia entre puntos 
-            laneline_obj.predict()
+            print("predic - kalman")
+            auxValue =laneline_obj.predict()
         if laneline_obj.timedOut():
             laneline_obj = None
-
+        #print("kalman")
         print(auxValue)
         
 
@@ -280,6 +286,8 @@ while True:
     if success:
         #print(img.shape)
         img1 = process_image(img)
+
+        cv2.waitKey(0)
 
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
